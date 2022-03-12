@@ -1,6 +1,7 @@
 package com.exactpro.bootcamp
 
 import com.exactpro.bootcamp.flows.TokenIssueFlowInitiator
+import com.exactpro.bootcamp.states.CurrencyType
 import com.exactpro.bootcamp.states.TokenState
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
@@ -29,7 +30,7 @@ class DriverBasedTest {
         val partyB = partyBHandle.nodeInfo.legalIdentities.first()
 
         // Run issue transaction using rpc
-        partyAHandle.rpc.startFlow(::TokenIssueFlowInitiator, partyB, 100).returnValue.getOrThrow()
+        partyAHandle.rpc.startFlow(::TokenIssueFlowInitiator, partyB, 100.0,  CurrencyType.RICK).returnValue.getOrThrow()
 
         // Query Node A
         val tokenStatesA = partyAHandle.rpc.vaultQueryBy<TokenState>()
@@ -38,7 +39,7 @@ class DriverBasedTest {
         val tokenStateA = tokenStatesA.states.single().state.data
         assertEquals(partyA, tokenStateA.issuer)
         assertEquals(partyB, tokenStateA.owner)
-        assertEquals(100, tokenStateA.amount)
+        assertEquals(100.0, tokenStateA.amount)
 
         // Query Node B
         val tokenStatesB = partyBHandle.rpc.vaultQueryBy<TokenState>()
@@ -47,7 +48,7 @@ class DriverBasedTest {
         val tokenStateB = tokenStatesB.states.single().state.data
         assertEquals(partyA, tokenStateB.issuer)
         assertEquals(partyB, tokenStateB.owner)
-        assertEquals(100, tokenStateB.amount)
+        assertEquals(100.0, tokenStateB.amount)
 
         // Query Node C
         val tokenStatesC = partyCHandle.rpc.vaultQueryBy<TokenState>()

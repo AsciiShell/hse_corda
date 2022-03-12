@@ -8,22 +8,22 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import kotlin.math.round
 
 // *********
 // * Flows *
 // *********
 @InitiatingFlow
 @StartableByRPC
-class TokenMoveFlowInitiator(
+class TokenSplitFlowInitiator(
     private val transactionId: SecureHash,
     private val outputIndex: Int,
-    private val newOwner: Party
+    private val splitRatio: Double
 ) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
@@ -40,22 +40,34 @@ class TokenMoveFlowInitiator(
         ).states.single()
 
         // We get the required signers.
-        val signers = inputState.state.data.participants + newOwner
+        val signers = inputState.state.data.participants
 
-        val amount = inputState.state.data.amount
+        val issuer = ourIdentity
 
-        // We create a TokenState with new owner.
-        // Реализована комиссия в 1% при переводе
-        val outputState = inputState.state.data.copy(owner = newOwner, amount = amount * 0.99)
+        val amount1 = (inputState.state.data.amount * splitRatio).roundTo(2)
+        val outputState1 = TokenState(
+            issuer,
+            issuer,
+            amount1,
+            inputState.state.data.currencyType
+        )
+
+        val outputState2 = TokenState(
+            issuer,
+            issuer,
+            inputState.state.data.amount - amount1,
+            inputState.state.data.currencyType
+        )
 
         // We create Move command.
-        val moveCommand = Command(TokenContract.Commands.Move(), signers.map { it.owningKey })
+        val splitCommand = Command(TokenContract.Commands.Split(), signers.map { it.owningKey })
 
         // We build our transaction.
         val transactionBuilder = TransactionBuilder(notary)
             .addInputState(inputState)
-            .addOutputState(outputState, TokenContract.ID)
-            .addCommand(moveCommand)
+            .addOutputState(outputState1, TokenContract.ID)
+            .addOutputState(outputState2, TokenContract.ID)
+            .addCommand(splitCommand)
 
         // We check our transaction is valid based on its contracts.
         transactionBuilder.verify(serviceHub)
@@ -74,13 +86,19 @@ class TokenMoveFlowInitiator(
     }
 }
 
-@InitiatedBy(TokenMoveFlowInitiator::class)
-class TokenMoveFlowResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+private fun Double.roundTo(i: Int): Double {
+    var multiplier = 1.0
+    repeat(i) { multiplier *= 10 }
+    return round(this * multiplier) / multiplier
+}
+
+@InitiatedBy(TokenSplitFlowInitiator::class)
+class TokenSplitFlowResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // Responder flow logic goes here.
 
-        val signedTransactionFlow = object: SignTransactionFlow(counterpartySession) {
+        val signedTransactionFlow = object : SignTransactionFlow(counterpartySession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 /* ============================================================================
                  *             TODO 6 - Implement responder flow transaction checks here

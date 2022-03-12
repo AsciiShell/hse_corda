@@ -3,6 +3,7 @@ package com.exactpro.bootcamp
 import com.exactpro.bootcamp.contracts.TokenContract
 import com.exactpro.bootcamp.flows.TokenIssueFlowInitiator
 import com.exactpro.bootcamp.flows.TokenIssueFlowResponder
+import com.exactpro.bootcamp.states.CurrencyType
 import com.exactpro.bootcamp.states.TokenState
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.getOrThrow
@@ -25,8 +26,8 @@ class FlowTests {
     @Before
     fun setup() {
         mockNetwork = MockNetwork(
-                listOf("com.exactpro.bootcamp"),
-                notarySpecs = listOf(MockNetworkNotarySpec(CordaX500Name("Notary","London","GB")))
+            listOf("com.exactpro.bootcamp"),
+            notarySpecs = listOf(MockNetworkNotarySpec(CordaX500Name("Notary", "London", "GB")))
         )
         nodeA = mockNetwork.createNode(MockNodeParameters())
         nodeB = mockNetwork.createNode(MockNodeParameters())
@@ -43,7 +44,7 @@ class FlowTests {
 
     @Test
     fun transactionConstructedByFlowUsesTheCorrectNotary() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 
@@ -56,7 +57,7 @@ class FlowTests {
 
     @Test
     fun transactionConstructedByFlowHasOneTokenStateOutputWithTheCorrectAmountAndOwner() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 
@@ -65,12 +66,12 @@ class FlowTests {
 
         val output = signedTransaction.tx.outputsOfType<TokenState>().single()
         assertEquals(nodeB.info.legalIdentities.first(), output.owner)
-        assertEquals(99, output.amount)
+        assertEquals(99.0, output.amount)
     }
 
     @Test
     fun transactionConstructedByFlowHasOneOutputUsingTheCorrectContract() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 
@@ -83,7 +84,7 @@ class FlowTests {
 
     @Test
     fun transactionConstructedByFlowHasOneIssueCommand() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 
@@ -96,7 +97,7 @@ class FlowTests {
 
     @Test
     fun transactionConstructedByFlowHasOneCommandWithTheIssuerAndTheOwnerAsASigners() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 
@@ -111,7 +112,7 @@ class FlowTests {
 
     @Test
     fun transactionConstructedByFlowHasNoInputsAttachmentsOrTimeWindows() {
-        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99)
+        val flow = TokenIssueFlowInitiator(nodeB.info.legalIdentities.first(), 99.0, CurrencyType.RICK)
         val future = nodeA.startFlow(flow)
         mockNetwork.runNetwork()
 

@@ -1,6 +1,7 @@
 package com.exactpro.bootcamp.contracts
 
 import com.exactpro.bootcamp.states.TokenState
+import com.exactpro.bootcamp.states.CurrencyType
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.CordaX500Name
 import net.corda.testing.contracts.DummyState
@@ -15,7 +16,7 @@ class ContractTests {
     private val alice = TestIdentity(CordaX500Name("Alice", "Kostroma", "RU")).party
     private val bob = TestIdentity(CordaX500Name("Bob", "Tomsk", "RU")).party
 
-    private val tokenState = TokenState(alice, bob, 1)
+    private val tokenState = TokenState(alice, bob, 1.0, CurrencyType.RICK)
 
     private val ledgerServices = MockServices()
 
@@ -106,9 +107,9 @@ class ContractTests {
 
     @Test
     fun tokenContractRequiresTheTransactionsOutputToHaveAPositiveAmount() {
-        val zeroTokenState = TokenState(alice, bob, 0)
-        val negativeTokenState = TokenState(alice, bob, -1)
-        val positiveTokenState = TokenState(alice, bob, 2)
+        val zeroTokenState = TokenState(alice, bob, 0.0, CurrencyType.RICK)
+        val negativeTokenState = TokenState(alice, bob, -1.0, CurrencyType.RICK)
+        val positiveTokenState = TokenState(alice, bob, 2.0, CurrencyType.RICK)
 
         ledgerServices.transaction {
             // Has zero-amount TokenState, will fail.
@@ -164,7 +165,7 @@ class ContractTests {
 
     @Test
     fun tokenContractRequiresTheIssuerToBeARequiredSignerInTheTransaction() {
-        val tokenStateWhereBobIsIssuer = TokenState(bob, alice, 1);
+        val tokenStateWhereBobIsIssuer = TokenState(bob, alice, 1.0, CurrencyType.RICK);
 
         ledgerServices.transaction {
             output(TokenContract.ID, tokenState)
@@ -199,7 +200,24 @@ class ContractTests {
         }
     }
 
-    /* ============================================================================
-     *                     TODO 1 - Create Move command tests
-     * ===========================================================================*/
+    @Test
+    fun tokenSplitTests() {
+        ledgerServices.transaction {
+            output(TokenContract.ID, DummyState())
+            command(listOf(alice.owningKey, bob.owningKey), TokenContract.Commands.Split())
+            this.fails()
+        }
+
+        ledgerServices.transaction {
+            output(TokenContract.ID, tokenState)
+            command(listOf(alice.owningKey, bob.owningKey), TokenContract.Commands.Split())
+            this.fails()
+        }
+        ledgerServices.transaction {
+            output(TokenContract.ID, tokenState)
+            command(listOf(bob.owningKey), TokenContract.Commands.Split())
+            this.verifies()
+        }
+    }
+
 }
